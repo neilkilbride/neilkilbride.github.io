@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thermal Camera</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      gap: 1.5rem;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: #ff6a00;
+    }
+
+    button#capture {
+      padding: 0.75rem 2.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      background: #ff6a00;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button#capture:hover  { background: #e05a00; }
+    button#capture:disabled { background: #555; cursor: not-allowed; }
+
+    #status {
+      font-size: 0.85rem;
+      color: #888;
+      min-height: 1.2em;
+    }
+    #status.error { color: #ff4444; }
+
+    #image-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    #thermal-image {
+      width: 100%;
+      border-radius: 8px;
+      image-rendering: pixelated;  /* keep the thermal look sharp */
+      border: 1px solid #333;
+    }
+
+    #timestamp {
+      font-size: 0.75rem;
+      color: #666;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    .stat-card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 0.875rem 1rem;
+    }
+    .stat-card .label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #666;
+      margin-bottom: 0.35rem;
+    }
+    .stat-card .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .stat-card .coords {
+      font-size: 0.75rem;
+      color: #666;
+      margin-top: 0.2rem;
+    }
+    .hot  { color: #ff6a00; }
+    .cold { color: #4ab3f4; }
+  </style>
+</head>
+<body>
+
+  <h1>Thermal Camera</h1>
+
+  <button id="capture">Capture</button>
+  <p id="status">Loading…</p>
+
+  <div id="image-container">
+    <img id="thermal-image" alt="Thermal capture" />
+    <span id="timestamp"></span>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Max temperature</div>
+        <div class="value hot" id="max-temp">—</div>
+        <div class="coords" id="max-coords"></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Min temperature</div>
+        <div class="value cold" id="min-temp">—</div>
+        <div class="coords" id="min-coords"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const btn       = document.getElementById('capture');
+    const status    = document.getElementById('status');
+    const container = document.getElementById('image-container');
+    const img       = document.getElementById('thermal-image');
+    const tsEl      = document.getElementById('timestamp');
+    const maxTemp   = document.getElementById('max-temp');
+    const minTemp   = document.getElementById('min-temp');
+    const maxCoords = document.getElementById('max-coords');
+    const minCoords = document.getElementById('min-coords');
+
+    // Capture button: open deep link to launch CameraActivity on the device.
+    // Passes this page's URL as the return destination.
+    btn.addEventListener('click', () => {
+      const returnUrl = encodeURIComponent(window.location.href);
+      window.location.href = 'thermalcamera://capture?return=' + returnUrl;
+    });
+
+    // On page load: fetch the latest capture from the on-device server.
+    async function loadLatest() {
+      try {
+        const res = await fetch('http://localhost:8080/latest');
+        if (res.status === 404) {
+          status.textContent = 'No captures yet — tap Capture to take one';
+          return;
+        }
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        displayCapture(data);
+      } catch (err) {
+        status.className = 'error';
+        status.textContent = 'Open the Thermal Camera app first, then return here';
+      }
+    }
+
+    function displayCapture(data) {
+      img.src = 'data:image/jpeg;base64,' + data.image_jpeg_base64;
+      container.style.display = 'flex';
+      tsEl.textContent = data.timestamp;
+      const t = data.temperature;
+      if (t && t.maxCelsius) {
+        maxTemp.textContent   = t.maxCelsius + ' °C';
+        minTemp.textContent   = t.minCelsius + ' °C';
+        maxCoords.textContent = 'x ' + t.maxPoint.x + ', y ' + t.maxPoint.y;
+        minCoords.textContent = 'x ' + t.minPoint.x + ', y ' + t.minPoint.y;
+      }
+      status.textContent = 'Captured at ' + data.timestamp;
+    }
+
+    loadLatest();
+  </script>
+
+</body>
+</html>
