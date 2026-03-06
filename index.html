@@ -125,7 +125,8 @@
       </div>
     </div>
   </div>
-
+  <div id="debug-output">
+  </div>
   <script>
     const btn       = document.getElementById('capture');
     const status    = document.getElementById('status');
@@ -136,6 +137,8 @@
     const minTemp   = document.getElementById('min-temp');
     const maxCoords = document.getElementById('max-coords');
     const minCoords = document.getElementById('min-coords');
+    const debugOutput = document.getElementById('debug-output');
+    const debugMode = true;
 
     // Capture button: open deep link to launch CameraActivity on the device.
     // Passes this page's URL as the return destination.
@@ -154,7 +157,14 @@
         }
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        displayCapture(data);
+        if(debugMode)
+        {
+          debugOutput.textContent = data;
+        }
+        else
+        {
+          displayCapture(data);
+        }
       } catch (err) {
         status.className = 'error';
         status.textContent = 'Open the Thermal Camera app first, then return here';
