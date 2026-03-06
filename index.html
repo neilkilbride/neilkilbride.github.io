@@ -125,8 +125,7 @@
       </div>
     </div>
   </div>
-  <div id="debug-output">
-  </div>
+  <pre id="debug-output" style="font-size:0.75rem;color:#aaa;white-space:pre-wrap;word-break:break-all;width:100%;max-width:480px;"></pre>
   <script>
     const btn       = document.getElementById('capture');
     const status    = document.getElementById('status');
@@ -159,7 +158,7 @@
         const data = await res.json();
         if(debugMode)
         {
-          debugOutput.textContent = data;
+          debugOutput.textContent = JSON.stringify(data, null, 2);
         }
         else
         {
